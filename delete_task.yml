@@ -1,0 +1,32 @@
+---
+- name: launch ec2 and alb
+  hosts: localhost
+  connection: local
+  tasks:
+  #delete ALB
+  - name: delete alb
+    elb_application_lb:
+      name: alb1
+      state: absent
+      region: ap-south-1
+
+  #delete tg
+  - name: delete tg
+    elb_target_group:
+      name: ec2tg
+      region: ap-south-1
+      state: absent
+
+  #delet ASG
+  - name: delete ec2 asg group
+    ec2_asg:
+      name: ec2asg
+      state: absent
+      region: ap-south-1
+
+  #delete ec2 LC
+  - name: delete ec2 launch config
+    ec2_lc:
+      name: lc1
+      state: absent
+      region: ap-south-1

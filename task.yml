@@ -1,0 +1,61 @@
+---
+- name: launch ec2 and alb
+  hosts: localhost
+  connection: local
+  tasks:
+  #create target group
+  - name: create tg
+    elb_target_group:
+      name: ec2tg
+      region: ap-south-1
+      protocol: http
+      port: 80
+      vpc_id: vpc-0e07d59c57e583d79
+      target_type: instance
+      state: present
+    register: ec2tg
+
+  #create ALB
+  - name: create alb
+    elb_application_lb:
+      name: alb1
+      state: present
+      subnets:
+        - subnet-06d211d9199bb7d97
+        - subnet-0b96cf849d8762415
+        - subnet-00a6b6e6cd3f8d4ad
+      region: ap-south-1
+      security_groups: sg-027a8c82f4fca644a
+      listeners:
+        - Protocol: HTTP
+          Port: 80
+          #associate with target group
+          DefaultActions:
+           - Type: forward
+             TargetGroupName: ec2tg
+
+  #create ec2 LC
+  - name: create ec2 launch config
+    ec2_lc:
+      name: lc1
+      image_id: ami-076e3a557efe1aa9c
+      key_name: ansibleTest
+      region: ap-south-1
+      security_groups: sg-027a8c82f4fca644a
+      instance_type: t2.micro
+      assign_public_ip: yes
+
+  #create Auto scaling group
+  - name: create ec2 asg group
+    ec2_asg:
+      name: ec2asg
+      #associate with target group
+      target_group_arns: "{{ec2tg.target_group_arn}}"
+      region: ap-south-1
+      availability_zones: [ 'ap-south-1a', 'ap-south-1b', 'ap-south-1c' ]
+      launch_config_name: lc1
+      min_size: 1
+      max_size: 10
+      desired_capacity: 3
+      vpc_zone_identifier: [ 'subnet-06d211d9199bb7d97', 'subnet-0b96cf849d8762415', 'subnet-00a6b6e6cd3f8d4ad' ]
+    register: ec2asg
